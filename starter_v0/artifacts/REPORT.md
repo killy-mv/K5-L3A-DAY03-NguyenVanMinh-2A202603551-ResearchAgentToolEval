@@ -65,7 +65,7 @@ Research Agent chọn tool để tìm tin trên web, lấy bài đăng theo tài
 **Rủi ro:** `send` kiểm tra cờ `confirmed`, nhưng LLM từng tự gán true. Xác nhận thực tế cần được lưu ở backend, không chỉ dựa vào tham số model.
 
 ## B3. Group Eval
-Đã soạn **10 case (5 single, 5 multi)** trong `data/eval_group.json`; **chưa chạy** nên không có PASS/FAIL thật.
+Đã soạn **10 case (5 single, 5 multi)** trong `data/eval_group.json`; **đã chạy** bằng Gemini, 10/10 PASS.
 
 | ID | Loại | Kỳ vọng |
 |---|---|---|
@@ -80,14 +80,34 @@ Research Agent chọn tool để tìm tin trên web, lấy bài đăng theo tài
 | G09 | Multi: sửa Sam Altman thành Karpathy | timeline(karpathy,5) |
 | G10 | Multi: chuyển Twitter thành web | lookup AI/news/day |
 
-Lệnh chạy: `python run_eval.py --provider gemini --version v3 --suite group --eval-cases data/eval_group.json`.
+**Kết quả:** 10/10 PASS (100% case accuracy); tool routing 100%; argument accuracy 100%; multi-turn accuracy 100%; 0 provider errors.
 
-## B4. Live chat
-Không có `transcripts/*.transcript.json` trong repo, nên chưa đủ bằng chứng ≥3 lượt live. Cần thử: tìm tin, thiếu URL rồi bổ sung, và xin xác nhận đăng Telegram. Sau đó ghi lại tool calls từ transcript, không tự điền.
+**Bằng chứng:** `runs/v3_B_group_gemini_20261110T135959480307.json` (v3, Gemini flash-lite). Group eval đo tool calls và arguments do Gemini thật sinh ra. Việc thực thi HTTP/Telegram tool được mô phỏng/không gọi thật để tránh tác động ngoài và timeout. Do đó kết quả **không chứng minh** end-to-end functionality hay nội dung API trả về.
+
+**Lệnh tham chiếu:** `python run_eval.py --provider gemini --version v3 --suite group --eval-cases data/eval_group.json` (lệnh gốc sẽ thực thi tool thật, khác với run routing-only này).
+
+## B4. Live Chat Evidence
+
+**Đã hoàn thành live chat thực tế:** một phiên gồm **4 lượt liên tiếp** trên Agent v3, sử dụng **Gemini (gemini-3.5-flash-lite)**. Dữ liệu lấy trực tiếp từ file `transcripts/v3_gemini_20261110T141111080092.transcript.json`, không phải transcript mô phỏng hoặc kết quả group eval.
+
+- **Thời gian:** 2026-11-10T14:11:11 đến 2026-11-10T14:13:41 (giờ máy chạy).
+- **Artifact version:** `v3+p7b37bf434ab1+t91db2613ae08`.
+- **Trạng thái:** 2 lượt `answered` và 2 lượt `waiting_for_user`; không ghi nhận `provider_error`. Cả bốn lượt thể hiện đúng hành vi routing/confirmation kỳ vọng.
+
+| Lượt | Yêu cầu thực tế | Tool calls / arguments thực tế | Status | Kết quả quan sát |
+|---|---|---|---|---|
+| 1 | Tìm 3 tin tức mới nhất về AI trong hôm nay trên web | `lookup(query="AI", topic="news", timeframe="day", max_results=3)` → `format` | `answered` | `lookup` trả 3 item; `format` tạo bản tin 3 mục, Agent phản hồi bằng văn bản |
+| 2 | Tóm tắt bài viết này giúp tôi (chưa cung cấp URL) | `clarify(response_type="text")` | `waiting_for_user` | Agent hỏi URL cụ thể, không tự tạo URL hoặc gọi `fetch` |
+| 3 | Đây là URL: https://www.python.org/about/ | `fetch(url="https://www.python.org/about/")` → `format` | `answered` | Tool `fetch` trả 1 trang; Agent tạo bản tóm tắt về Python.org |
+| 4 | Đăng bản tóm tắt này lên Telegram giúp tôi | `clarify(response_type="yes_no")` | `waiting_for_user` | Agent hỏi xác nhận trước khi đăng. **Không có lời xác nhận hoặc lệnh `send`** trong phiên này |
+
+**Nhận xét:** Các tool `lookup`, `fetch` và `format` được thực thi trong phiên chat thật, khác với group eval B3 chỉ kiểm tra routing và mô phỏng thực thi tool. Lượt 2–3 cho thấy Agent giữ được yêu cầu tóm tắt qua các lượt liên tiếp. Lượt 4 cho thấy ranh giới xác nhận được thực thi đúng ở thời điểm kiểm tra; **chưa kiểm chứng việc gửi Telegram sau khi người dùng xác nhận**.
+
+**Giới hạn:** Transcript chứng minh các tool đã được gọi và phản hồi của chúng được dùng để tạo văn bản; chưa có kiểm chứng độc lập tính chính xác hoặc độ tin cậy của mọi nguồn tin. Không có bằng chứng về một lần gửi Telegram thành công.
 
 ## B5. Bonus / test
 - **62 passed, 17 skipped, 0 failed** ở bộ test starter. Các TODO đang skipped.
-- Chưa có UI, link public, transcript, tool mới hoặc regression test mới.
+- Chưa có UI/link public, tool mới hoặc regression test mới; **đã có transcript live 4 lượt** tại `transcripts/v3_gemini_20261110T141111080092.transcript.json`.
 - Các tool Telegram, policy, arXiv có sẵn trong starter, không coi là phát triển mới.
 - Không có log Ollama / local model.
 
@@ -98,10 +118,10 @@ Không có `transcripts/*.transcript.json` trong repo, nên chưa đủ bằng c
 
 **Đánh giá thủ công:** `query='AI news today'` bị sai theo exact match nhưng có thể trả kết quả liên quan. Routing/args đúng không đảm bảo nội dung nguồn đúng.
 
-**Việc còn lại:** tạo tool mới và 3 test; chạy group eval; có UI/deploy, 3 transcript; xử lý lỗi 429; lưu prompt/tools theo hash; xác nhận gửi qua trạng thái backend.
+**Việc còn lại:** tạo tool mới và 3 test; kiểm chứng end-to-end theo mục tiêu lab; có UI/deploy; xử lý lỗi 429; lưu prompt/tools theo hash; xác nhận gửi qua trạng thái backend. **Live chat 4 lượt đã hoàn thành và ghi nhận tại B4.**
 
 ## B7. Small Local Model Challenge
 Chưa có bằng chứng chạy hai model Ollama hay v4/v5-local. Không ghi số liệu giả.
 
 ## Kết luận
-Đã tích hợp **v1 Nguyễn Quang Duy**, **v2 Đặng Long Nhật** và **v3 Lê Quang Vinh** vào `main`; giữ v1 Minh làm dữ liệu bổ sung. V1 Duy đạt **75% (15/20)**, tăng từ baseline **70% (14/20)** cùng model OpenRouter. V2 Nhật đạt **80% (16/20)** trên OpenAI. V3 Vinh đạt **83,33% (10/12)** nhưng 8 case bị lỗi provider. Cần chạy lại các case thiếu và hoàn thành UI, transcript, tool mới trước khi nộp.
+Đã tích hợp **v1 Nguyễn Quang Duy**, **v2 Đặng Long Nhật** và **v3 Lê Quang Vinh** vào `main`; giữ v1 Minh làm dữ liệu bổ sung. V1 Duy đạt **75% (15/20)**, tăng từ baseline **70% (14/20)** cùng model OpenRouter. V2 Nhật đạt **80% (16/20)** trên OpenAI. V3 Vinh đạt **83,33% (10/12)** nhưng 8 case bị lỗi provider. Cần chạy lại các case thiếu và hoàn thành UI và tool mới trước khi nộp.
