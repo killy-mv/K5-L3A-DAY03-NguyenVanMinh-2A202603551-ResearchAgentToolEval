@@ -6,9 +6,9 @@
 
 ## Team
 
-- Team:
-- Members:
-- Provider/model:
+- Team: Halluciation 
+- Members: Nguyễn Văn Minh-03551, Lê Quang Vinh-03363, Nguyễn Quang Duy-034462, Đặng Long Nhật-03483, Nguyễn Đức Đạt-03544
+- Provider/model: gpt-4o mini
 
 ---
 
