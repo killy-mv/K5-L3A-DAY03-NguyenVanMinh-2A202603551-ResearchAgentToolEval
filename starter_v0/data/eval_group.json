@@ -2,6 +2,259 @@
   "dataset_id": "day04_v2_research_group",
   "dataset_role": "group",
   "description": "Case do NHÓM tự viết thêm để cover thêm trường hợp. Mỗi case cần: id, phase='B', query HOẶC turns, failure_type (thuộc allowed_failure_types), và expect (tool_calls[...] hoặc no_tool=true). Nên kèm metadata.what_it_tests.",
-  "allowed_failure_types": ["wrong_tool", "wrong_arg_value", "wrong_boundary", "unnecessary_tool", "out_of_scope", "missing_info"],
-  "cases": []
+  "allowed_failure_types": [
+    "wrong_tool",
+    "wrong_arg_value",
+    "wrong_boundary",
+    "unnecessary_tool",
+    "out_of_scope",
+    "missing_info"
+  ],
+  "cases": [
+    {
+      "id": "G01_account",
+      "phase": "B",
+      "failure_type": "wrong_tool",
+      "expect": {
+        "tool_calls": [
+          {
+            "name": "timeline",
+            "args": {
+              "screenname": "elonmusk",
+              "limit": 4
+            }
+          }
+        ]
+      },
+      "metadata": {
+        "what_it_tests": "Named account and limit"
+      },
+      "query": "Get 4 latest tweets by Elon Musk"
+    },
+    {
+      "id": "G02_top",
+      "phase": "B",
+      "failure_type": "wrong_arg_value",
+      "expect": {
+        "tool_calls": [
+          {
+            "name": "social_search",
+            "args": {
+              "query": "robotics",
+              "search_type": "Top"
+            }
+          }
+        ]
+      },
+      "metadata": {
+        "what_it_tests": "Top topic tweets"
+      },
+      "query": "Show top tweets about robotics"
+    },
+    {
+      "id": "G03_missing_url",
+      "phase": "B",
+      "failure_type": "missing_info",
+      "expect": {
+        "tool_calls": [
+          {
+            "name": "clarify",
+            "args": {
+              "response_type": "text"
+            }
+          }
+        ]
+      },
+      "metadata": {
+        "what_it_tests": "Missing URL needs clarification"
+      },
+      "query": "Summarize this article"
+    },
+    {
+      "id": "G04_publish",
+      "phase": "B",
+      "failure_type": "wrong_boundary",
+      "expect": {
+        "tool_calls": [
+          {
+            "name": "clarify",
+            "args": {
+              "response_type": "yes_no"
+            }
+          }
+        ]
+      },
+      "metadata": {
+        "what_it_tests": "Telegram needs yes/no confirmation"
+      },
+      "query": "Publish this digest on Telegram"
+    },
+    {
+      "id": "G05_daily",
+      "phase": "B",
+      "failure_type": "wrong_arg_value",
+      "expect": {
+        "tool_calls": [
+          {
+            "name": "lookup",
+            "args": {
+              "query": "AI",
+              "topic": "news",
+              "timeframe": "day"
+            }
+          }
+        ]
+      },
+      "metadata": {
+        "what_it_tests": "Web news daily routing"
+      },
+      "query": "AI news today on the web"
+    },
+    {
+      "id": "G06_limit",
+      "phase": "B",
+      "failure_type": "wrong_arg_value",
+      "expect": {
+        "tool_calls": [
+          {
+            "name": "timeline",
+            "args": {
+              "screenname": "elonmusk",
+              "limit": 3
+            }
+          }
+        ]
+      },
+      "metadata": {
+        "what_it_tests": "Correct limit in next turn"
+      },
+      "turns": [
+        {
+          "role": "user",
+          "content": "Get 10 latest tweets from Elon Musk"
+        },
+        {
+          "role": "user",
+          "content": "Make that 3 tweets instead"
+        }
+      ]
+    },
+    {
+      "id": "G07_topic",
+      "phase": "B",
+      "failure_type": "wrong_arg_value",
+      "expect": {
+        "tool_calls": [
+          {
+            "name": "lookup",
+            "args": {
+              "query": "AI",
+              "topic": "news",
+              "timeframe": "week"
+            }
+          }
+        ]
+      },
+      "metadata": {
+        "what_it_tests": "Change topic preserve week"
+      },
+      "turns": [
+        {
+          "role": "user",
+          "content": "Technology news about robotics this week"
+        },
+        {
+          "role": "user",
+          "content": "Switch topic to AI, still this week"
+        }
+      ]
+    },
+    {
+      "id": "G08_url",
+      "phase": "B",
+      "failure_type": "missing_info",
+      "expect": {
+        "tool_calls": [
+          {
+            "name": "fetch",
+            "args": {
+              "url": "https://example.com/research"
+            }
+          }
+        ]
+      },
+      "metadata": {
+        "what_it_tests": "Followup supplies URL"
+      },
+      "turns": [
+        {
+          "role": "user",
+          "content": "Summarize this article"
+        },
+        {
+          "role": "user",
+          "content": "Here is the URL: https://example.com/research"
+        }
+      ]
+    },
+    {
+      "id": "G09_account",
+      "phase": "B",
+      "failure_type": "wrong_arg_value",
+      "expect": {
+        "tool_calls": [
+          {
+            "name": "timeline",
+            "args": {
+              "screenname": "karpathy",
+              "limit": 5
+            }
+          }
+        ]
+      },
+      "metadata": {
+        "what_it_tests": "Correct person preserve limit"
+      },
+      "turns": [
+        {
+          "role": "user",
+          "content": "Get five latest tweets by Sam Altman"
+        },
+        {
+          "role": "user",
+          "content": "Sorry I meant Andrej Karpathy"
+        }
+      ]
+    },
+    {
+      "id": "G10_switch",
+      "phase": "B",
+      "failure_type": "wrong_tool",
+      "expect": {
+        "tool_calls": [
+          {
+            "name": "lookup",
+            "args": {
+              "query": "AI",
+              "topic": "news",
+              "timeframe": "day"
+            }
+          }
+        ]
+      },
+      "metadata": {
+        "what_it_tests": "Switch social search to web"
+      },
+      "turns": [
+        {
+          "role": "user",
+          "content": "What is trending about AI on Twitter?"
+        },
+        {
+          "role": "user",
+          "content": "Instead find AI news today on the web"
+        }
+      ]
+    }
+  ]
 }
