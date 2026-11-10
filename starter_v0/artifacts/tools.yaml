@@ -1,57 +1,49 @@
-# starter_v0 — tool declarations (intentionally vague).
-# Names and descriptions here are a rough first draft. Routing rules, name->handle
-# mapping, arg conventions (news/timeframe/Top), and the send-confirmation boundary
-# are NOT spelled out anywhere yet. Your job is to make these declarations + the
-# system prompt good enough that the agent routes correctly on the eval.
+# starter_v0 — tool declarations.
+# Keep routing guidance and argument conventions aligned with system_prompt.md.
 #
 # If you rename a tool, keep the name in sync across:
 #   this file  ->  tools/__init__.py (TOOL_FUNCTIONS)  ->  data/eval_base.json + data/eval_research_extension.json
 # `pytest tests/test_tool_contract.py` checks this sync for you.
 #
-# TODO(student):
-#   - Rewrite every description: what it does, WHEN to use it, WHEN NOT to use it.
-#   - Spell out arg conventions in parameter descriptions (handle format, topic/timeframe, search_type).
-#   - Make the `send` confirmation boundary explicit.
-#   - Declare your new tool(s) at the end of this file.
 tools:
   # ---------------- Core tools ----------------
   - name: clarify
-    description: "Gửi một câu hỏi cho người dùng."
+    description: "Hỏi một câu ngắn khi thiếu thông tin bắt buộc. Dùng response_type=text để xin thông tin; dùng yes_no để lấy xác nhận trước khi gửi. Không dùng để hỏi lại dữ liệu đã có."
     parameters:
       type: object
       properties:
         question: {type: string, default: "", description: "Câu hỏi"}
-        response_type: {type: string, enum: [text, yes_no, choice], default: "text", description: "Kiểu trả lời"}
+        response_type: {type: string, enum: [text, yes_no, choice], default: "text", description: "text để xin dữ liệu còn thiếu; yes_no để xác nhận hành động"}
         options: {type: array, default: [], items: {type: string}, description: "Các lựa chọn"}
       required: [question]
 
   - name: timeline
-    description: "Lấy các bài đăng gần đây."
+    description: "Lấy bài đăng gần đây của một tài khoản cụ thể. Dùng cho bài CỦA một người; không dùng để tìm bài theo chủ đề. screenname là handle không có @ (ví dụ elonmusk, sama, karpathy)."
     parameters:
       type: object
       properties:
-        screenname: {type: string, default: "", description: "Tên tài khoản"}
-        limit: {type: integer, default: 5, description: "Số lượng"}
+        screenname: {type: string, default: "", description: "Handle tài khoản, bỏ ký tự @; ánh xạ tên chắc chắn sang handle nếu biết"}
+        limit: {type: integer, default: 5, description: "Số bài cần lấy; giữ nguyên số user yêu cầu"}
       required: [screenname]
 
   - name: social_search
-    description: "Tìm trên mạng xã hội."
+    description: "Tìm bài đăng theo chủ đề hoặc từ khóa trên mạng xã hội. Dùng cho thảo luận về một chủ đề, không dùng cho timeline của một tài khoản cụ thể."
     parameters:
       type: object
       properties:
-        query: {type: string, default: "", description: "Từ khóa"}
-        search_type: {type: string, enum: [Latest, Top], default: "Latest", description: "Cách sắp xếp"}
-        limit: {type: integer, default: 5, description: "Số lượng"}
+        query: {type: string, default: "", description: "Chủ đề cốt lõi, ví dụ AI; không thêm Twitter/news/today nếu không cần"}
+        search_type: {type: string, enum: [Latest, Top], default: "Latest", description: "Latest cho bài mới; Top cho bài phổ biến"}
+        limit: {type: integer, default: 5, description: "Số bài cần lấy; giữ nguyên số user yêu cầu"}
       required: [query]
 
   - name: lookup
-    description: "Tra cứu thông tin trên internet."
+    description: "Tìm thông tin trên web. Dùng cho thông tin web/tin tức, không dùng cho bài đăng mạng xã hội hoặc câu hỏi toán/lập trình ngoài phạm vi research."
     parameters:
       type: object
       properties:
-        query: {type: string, default: "", description: "Truy vấn"}
-        topic: {type: string, enum: [general, news], default: "general", description: "Phân loại"}
-        timeframe: {type: string, enum: [day, week, month, year], default: "week", description: "Khoảng thời gian"}
+        query: {type: string, default: "", description: "Chủ đề cốt lõi; ví dụ tin AI hôm nay -> AI. Không thêm news/today khi topic và timeframe đã thể hiện ý đó."}
+        topic: {type: string, enum: [general, news], default: "general", description: "news cho tin thời sự; general cho tra cứu web thông thường"}
+        timeframe: {type: string, enum: [day, week, month, year], default: "week", description: "Khoảng thời gian; dùng day cho hôm nay, week cho tuần này"}
         max_results: {type: integer, default: 5, description: "Số kết quả"}
       required: [query]
 
@@ -86,12 +78,12 @@ tools:
 
   # ---------------- Bonus tools ----------------
   - name: send
-    description: "Gửi một đoạn văn bản đi."
+    description: "Gửi nội dung lên Telegram. Nếu user chưa xác nhận, trước tiên dùng clarify với response_type=yes_no (kể cả khi nội dung còn thiếu); sau khi xác nhận, hỏi nội dung còn thiếu rồi chỉ gọi send với confirmed=true."
     parameters:
       type: object
       properties:
         text: {type: string, default: "", description: "Nội dung"}
-        confirmed: {type: boolean, default: false, description: "Cờ xác nhận"}
+        confirmed: {type: boolean, default: false, description: "true chỉ sau khi user xác nhận rõ ràng; nếu chưa, không gọi send"}
       required: [text]
 
   - name: policy
